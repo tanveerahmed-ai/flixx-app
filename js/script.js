@@ -5,6 +5,7 @@ const global = {
     type: "",
     page: 1,
     totalPages: 1,
+    totalResults: 0,
   },
   api: {
     apiKey: "e813bbfe540d9aa47b6112cce3b05d5c",
@@ -20,19 +21,280 @@ function highlightActiveLink() {
     }
   });
 }
+//Make Request to Search
+// async function search() {
+//   const queryString = window.location.search;
+//   const urlParams = new URLSearchParams(queryString);
 
+//   // Add the type and term to the global object
+//   global.search.type = urlParams.get("type");
+//   global.search.term = urlParams.get("search-term");
+
+//   if (global.search.term !== "" && global.search.term !== null) {
+//     const { results, total_pages, page, total_results } = await searchAPIData();
+//     global.search.totalResults = total_results;
+//     if (results.length === 0) {
+//       showAlert("No results found");
+//     }
+
+//     displaySearchResults(results);
+
+//     document.querySelector("#search-term").value = "";
+//   } else {
+//     showAlert("Please enter a search term");
+//   }
+// }
 async function search() {
   const queryString = window.location.search;
   const urlParams = new URLSearchParams(queryString);
-  //Add the type and term to the global object
+
   global.search.type = urlParams.get("type");
-  global.search.type = urlParams.get("search-term");
+  global.search.term = urlParams.get("search-term");
+
   if (global.search.term !== "" && global.search.term !== null) {
-    const results = await searchAPIData();
-    console.log(results);
+    const { results, total_pages, total_results } = await searchAPIData();
+
+    global.search.totalPages = total_pages; // ✅ fix
+    global.search.totalResults = total_results;
+
+    if (results.length === 0) {
+      showAlert("No results found");
+      return;
+    }
+
+    displaySearchResults(results);
+    displayPagination(); // ✅ move pagination call here
+
+    document.querySelector("#search-term").value = "";
   } else {
-    showAlert("Please Enter a Search Term");
+    showAlert("Please enter a search term");
   }
+}
+
+//DisplaySearchResults
+
+// function displaySearchResults(results) {
+//   //   console.log(results);
+
+//   results.forEach((result) => {
+//     const div = document.createElement("div");
+//     div.classList.add("card");
+//     div.innerHTML = `
+//           <a href="${global.search.type}-details.html?id=${result.id}">
+//             ${
+//               result.poster_path
+//                 ? `<img
+//               src="https://image.tmdb.org/t/p/w500/${result.poster_path}"
+//               class="card-img-top"
+//               alt="${
+//                 global.search.type === "movie" ? result.title : result.name
+//               }"
+//             />`
+//                 : `<img
+//             src="../images/no-image.jpg"
+//             class="card-img-top"
+//              alt="${
+//                global.search.type === "movie" ? result.title : result.name
+//              }"
+//           />`
+//             }
+//           </a>
+//           <div class="card-body">
+//             <h5 class="card-title">${
+//               global.search.type === "movie" ? result.title : result.name
+//             }</h5>
+//             <p class="card-text">
+//               <small class="text-muted">Release: ${
+//                 global.search.type === "movie"
+//                   ? result.release_date
+//                   : result.first_air_date
+//               }</small>
+//             </p>
+//           </div>
+//         `;
+//     document.querySelector("#search-results-heading").innerHTML = `
+//               <h2>${results.length} of ${global.search.totalResults} Results for ${global.search.term}</h2>
+//     `;
+
+//     document.querySelector("#search-results").appendChild(div);
+//   });
+// }
+function displaySearchResults(results) {
+  const resultsContainer = document.querySelector("#search-results");
+  resultsContainer.innerHTML = ""; // ✅ clear old results
+
+  results.forEach((result) => {
+    const div = document.createElement("div");
+    div.classList.add("card");
+    div.innerHTML = `
+      <a href="${global.search.type}-details.html?id=${result.id}">
+        ${
+          result.poster_path
+            ? `<img src="https://image.tmdb.org/t/p/w500/${
+                result.poster_path
+              }" class="card-img-top"
+              alt="${
+                global.search.type === "movie" ? result.title : result.name
+              }" />`
+            : `<img src="../images/no-image.jpg" class="card-img-top"
+              alt="${
+                global.search.type === "movie" ? result.title : result.name
+              }" />`
+        }
+      </a>
+      <div class="card-body">
+        <h5 class="card-title">${
+          global.search.type === "movie" ? result.title : result.name
+        }</h5>
+        <p class="card-text">
+          <small class="text-muted">Release: ${
+            global.search.type === "movie"
+              ? result.release_date
+              : result.first_air_date
+          }</small>
+        </p>
+      </div>
+    `;
+    resultsContainer.appendChild(div);
+  });
+
+  document.querySelector("#search-results-heading").innerHTML = `
+    <h2>Showing Page ${global.search.page} of ${global.search.totalPages} 
+    (${global.search.totalResults} results for "${global.search.term}")</h2>
+  `;
+}
+
+//Make Request to SearchAPI
+
+async function searchAPIData() {
+  const API_KEY = global.api.apiKey;
+  const API_URL = global.api.apiUrl;
+  //showspinner
+  showSpinner();
+  const response = await fetch(
+    `${API_URL}search/${global.search.type}?api_key=${API_KEY}&language=en-US&query=${global.search.term}&page=${global.search.page}`
+  );
+  const data = await response.json();
+  HideSpinner();
+  return data;
+}
+
+// Create & Display Pagination For Search
+// function displayPagination() {
+//   const div = document.createElement("div");
+//   div.classList.add("pagination");
+//   div.innerHTML = `
+//   <button class="btn btn-primary" id="prev">Prev</button>
+//   <button class="btn btn-primary" id="next">Next</button>
+//   <div class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</div>
+//   `;
+
+//   document.querySelector("#pagination").appendChild(div);
+
+//   // Disable prev button if on first page
+//   if (global.search.page === 1) {
+//     document.querySelector("#prev").disabled = true;
+//   }
+
+//   // Disable next button if on last page
+//   if (global.search.page === global.search.totalPages) {
+//     document.querySelector("#next").disabled = true;
+//   }
+
+//   // Next page
+//   document.querySelector("#next").addEventListener("click", async () => {
+//     global.search.page++;
+//     const { results, total_pages } = await searchAPIData();
+//     displaySearchResults(results);
+//   });
+
+//   // Prev page
+//   document.querySelector("#prev").addEventListener("click", async () => {
+//     global.search.page--;
+//     const { results, total_pages } = await searchAPIData();
+//     displaySearchResults(results);
+//   });
+// }
+// Create & Display Pagination For Search
+// function displayPagination() {
+//   const container = document.querySelector("#pagination");
+//   container.innerHTML = ""; // clear old pagination
+
+//   const div = document.createElement("div");
+//   div.classList.add("pagination");
+//   div.innerHTML = `
+//     <button class="btn btn-primary" id="prev">Prev</button>
+//     <button class="btn btn-primary" id="next">Next</button>
+//     <div class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</div>
+//   `;
+
+//   container.appendChild(div);
+
+//   // Disable prev button if on first page
+//   if (global.search.page === 1) {
+//     document.querySelector("#prev").disabled = true;
+//   }
+
+//   // Disable next button if on last page
+//   if (global.search.page === global.search.totalPages) {
+//     document.querySelector("#next").disabled = true;
+//   }
+
+//   // Next page
+//   document.querySelector("#next").addEventListener("click", async () => {
+//     global.search.page++;
+//     const { results, total_pages } = await searchAPIData();
+//     global.search.totalPages = total_pages;
+//     displaySearchResults(results);
+//     displayPagination();
+//   });
+
+//   // Prev page
+//   document.querySelector("#prev").addEventListener("click", async () => {
+//     global.search.page--;
+//     const { results, total_pages } = await searchAPIData();
+//     global.search.totalPages = total_pages;
+//     displaySearchResults(results);
+//     displayPagination();
+//   });
+// }
+function displayPagination() {
+  const container = document.querySelector("#pagination");
+  container.innerHTML = "";
+
+  if (global.search.totalPages <= 1) return; // ✅ no need for pagination
+
+  const div = document.createElement("div");
+  div.classList.add("pagination");
+  div.innerHTML = `
+    <button class="btn btn-primary" id="prev">Prev</button>
+    <span class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</span>
+    <button class="btn btn-primary" id="next">Next</button>
+  `;
+  container.appendChild(div);
+
+  // disable buttons when needed
+  document.querySelector("#prev").disabled = global.search.page === 1;
+  document.querySelector("#next").disabled =
+    global.search.page === global.search.totalPages;
+
+  // next
+  document.querySelector("#next").addEventListener("click", async () => {
+    global.search.page++;
+    const { results, total_pages } = await searchAPIData();
+    global.search.totalPages = total_pages;
+    displaySearchResults(results);
+    displayPagination();
+  });
+
+  // prev
+  document.querySelector("#prev").addEventListener("click", async () => {
+    global.search.page--;
+    const { results, total_pages } = await searchAPIData();
+    global.search.totalPages = total_pages;
+    displaySearchResults(results);
+    displayPagination();
+  });
 }
 
 //displayShowDetails updated
@@ -278,7 +540,7 @@ async function fetchAPIData(endpoint) {
   //showspinner
   showSpinner();
   const response = await fetch(
-    `${API_URL}/${endpoint}?api_key=${API_KEY}&language=en-US`
+    `${API_URL}${endpoint}?api_key=${API_KEY}&language=en-US`
   );
   const data = await response.json();
   HideSpinner();
@@ -286,9 +548,30 @@ async function fetchAPIData(endpoint) {
 }
 
 //Display backdrop on Details Page
+// function displayBackgroundImage(type, backgroundPath) {
+//   const overlayDiv = document.createElement("div");
+//   overlayDiv.style.backgroundImage = `url('https://image.tmdb.org/t/p/original/${backgroundPath})`;
+//   overlayDiv.style.backgroundSize = "cover";
+//   overlayDiv.style.backgroundPosition = "center";
+//   overlayDiv.style.backgroundRepeat = "no-repeat";
+//   overlayDiv.style.height = "100vh";
+//   overlayDiv.style.width = "100vw";
+//   overlayDiv.style.position = "absolute";
+//   overlayDiv.style.top = "0";
+//   overlayDiv.style.left = "0";
+//   overlayDiv.style.zIndex = "-1";
+//   overlayDiv.style.opacity = "0.1";
+//   if (type === "movie") {
+//     document.querySelector("#movie-details").appendChild(overlayDiv);
+//   } else {
+//     document.querySelector("#show-details").appendChild(overlayDiv);
+//   }
+// }
 function displayBackgroundImage(type, backgroundPath) {
+  if (!backgroundPath) return; // ✅ handle missing
+
   const overlayDiv = document.createElement("div");
-  overlayDiv.style.backgroundImage = `url('https://image.tmdb.org/t/p/original/${backgroundPath})`;
+  overlayDiv.style.backgroundImage = `url('https://image.tmdb.org/t/p/original/${backgroundPath}')`;
   overlayDiv.style.backgroundSize = "cover";
   overlayDiv.style.backgroundPosition = "center";
   overlayDiv.style.backgroundRepeat = "no-repeat";
@@ -299,6 +582,7 @@ function displayBackgroundImage(type, backgroundPath) {
   overlayDiv.style.left = "0";
   overlayDiv.style.zIndex = "-1";
   overlayDiv.style.opacity = "0.1";
+
   if (type === "movie") {
     document.querySelector("#movie-details").appendChild(overlayDiv);
   } else {
@@ -323,10 +607,13 @@ function init() {
       break;
 
       console.log("shows");
+
     case "/search.html":
       search();
+      displayPagination();
       console.log("Search");
       break;
+
     case "/tv-details.html":
       displayShowDetails();
       console.log("Tv Details");
