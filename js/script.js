@@ -11,7 +11,7 @@ function highlightActiveLink() {
   });
 }
 
-//displayShowDetails
+//displayShowDetails updated
 async function displayShowDetails() {
   const showId = window.location.search.split("=")[1];
 
