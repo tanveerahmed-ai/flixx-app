@@ -1,5 +1,15 @@
 const global = {
   currentPage: window.location.pathname,
+  search: {
+    term: "",
+    type: "",
+    page: 1,
+    totalPages: 1,
+  },
+  api: {
+    apiKey: "e813bbfe540d9aa47b6112cce3b05d5c",
+    apiUrl: "https://api.themoviedb.org/3/",
+  },
 };
 //Highlight Active Lik
 function highlightActiveLink() {
@@ -9,6 +19,20 @@ function highlightActiveLink() {
       link.classList.add("active");
     }
   });
+}
+
+async function search() {
+  const queryString = window.location.search;
+  const urlParams = new URLSearchParams(queryString);
+  //Add the type and term to the global object
+  global.search.type = urlParams.get("type");
+  global.search.type = urlParams.get("search-term");
+  if (global.search.term !== "" && global.search.term !== null) {
+    const results = await searchAPIData();
+    console.log(results);
+  } else {
+    showAlert("Please Enter a Search Term");
+  }
 }
 
 //displayShowDetails updated
@@ -155,7 +179,15 @@ async function displayMovieDetails() {
 function addCommasToNumber(number) {
   return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
+// Show Alert
+function showAlert(message, className = "error") {
+  const alertEl = document.createElement("div");
+  alertEl.classList.add("alert", className);
+  alertEl.appendChild(document.createTextNode(message));
+  document.querySelector("#alert").appendChild(alertEl);
 
+  setTimeout(() => alertEl.remove(), 3000);
+}
 //displayPopular Movies
 async function displayPopularMovies() {
   const { results } = await fetchAPIData("movie/popular");
@@ -241,8 +273,8 @@ function HideSpinner() {
 
 //Fetch Data from TMDB API
 async function fetchAPIData(endpoint) {
-  const API_KEY = "e813bbfe540d9aa47b6112cce3b05d5c";
-  const API_URL = "https://api.themoviedb.org/3";
+  const API_KEY = global.api.apiKey;
+  const API_URL = global.api.apiUrl;
   //showspinner
   showSpinner();
   const response = await fetch(
@@ -292,6 +324,7 @@ function init() {
 
       console.log("shows");
     case "/search.html":
+      search();
       console.log("Search");
       break;
     case "/tv-details.html":
